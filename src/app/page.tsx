@@ -12,6 +12,9 @@ import MaterialCard from '@/components/materials/MaterialCard';
 import MaterialUpload from '@/components/materials/MaterialUpload';
 import MaterialViewer from '@/components/materials/MaterialViewer';
 import Button from '@/components/ui/Button';
+import NeedsAnalysisWizard from '@/components/analysis/NeedsAnalysisWizard';
+import OutlineBuilder from '@/components/outline/OutlineBuilder';
+import DesignDocGenerator from '@/components/design-doc/DesignDocGenerator';
 
 function DashboardView() {
   const projects = useAppStore((s) => s.projects);
@@ -209,11 +212,26 @@ export default function Home() {
   const activeView = useAppStore((s) => s.activeView);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
 
+  const renderProjectView = () => {
+    if (!activeProjectId) return null;
+    switch (activeView) {
+      case 'analysis':
+        return <NeedsAnalysisWizard projectId={activeProjectId} />;
+      case 'outline':
+        return <OutlineBuilder projectId={activeProjectId} />;
+      case 'design-doc':
+        return <DesignDocGenerator projectId={activeProjectId} />;
+      case 'chat':
+      default:
+        return <ChatView />;
+    }
+  };
+
   return (
     <AppShell>
-      {activeView === 'dashboard' && !activeProjectId && <DashboardView />}
-      {(activeView === 'chat' || activeProjectId) && <ChatView />}
-      {activeView === 'materials' && !activeProjectId && <MaterialsView />}
+      {!activeProjectId && activeView === 'dashboard' && <DashboardView />}
+      {!activeProjectId && activeView === 'materials' && <MaterialsView />}
+      {activeProjectId && renderProjectView()}
     </AppShell>
   );
 }

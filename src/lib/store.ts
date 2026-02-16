@@ -9,6 +9,22 @@ import {
   Tag,
   ADDIEPhase,
   CourseType,
+  AnalysisArea,
+  AnalysisResponse,
+  AnalysisWizardState,
+  AnalysisWizardStatus,
+  NeedsAnalysisReport,
+  AnalysisRedFlag,
+  CourseOutline,
+  CourseModule,
+  LessonPlan,
+  LearningObjective,
+  BloomLevel,
+  VARKModality,
+  ZPDLevel,
+  DesignDocument,
+  DesignDocFormat,
+  DesignDocSlide,
 } from './types';
 import { generateId } from './utils';
 
@@ -153,7 +169,7 @@ const sampleCollection: MaterialCollection = {
 interface AppState {
   // Navigation
   sidebarOpen: boolean;
-  activeView: 'dashboard' | 'chat' | 'materials' | 'settings';
+  activeView: 'dashboard' | 'chat' | 'materials' | 'settings' | 'analysis' | 'outline' | 'design-doc';
   setSidebarOpen: (open: boolean) => void;
   setActiveView: (view: AppState['activeView']) => void;
 
@@ -195,6 +211,42 @@ interface AppState {
     materials: Material[];
   };
   performSearch: (query: string) => void;
+
+  // ── Needs Analysis Wizard ──
+  analysisWizards: Record<string, AnalysisWizardState>; // keyed by projectId
+  getAnalysisWizard: (projectId: string) => AnalysisWizardState;
+  startAnalysisWizard: (projectId: string) => void;
+  setAnalysisArea: (projectId: string, area: AnalysisArea) => void;
+  addAnalysisResponse: (projectId: string, response: Omit<AnalysisResponse, 'timestamp'>) => void;
+  completeAnalysisArea: (projectId: string, area: AnalysisArea) => void;
+  setAnalysisReport: (projectId: string, report: NeedsAnalysisReport) => void;
+  completeAnalysisWizard: (projectId: string) => void;
+
+  // ── Course Outline Builder ──
+  courseOutlines: Record<string, CourseOutline>; // keyed by projectId
+  getCourseOutline: (projectId: string) => CourseOutline | null;
+  createCourseOutline: (projectId: string, courseGoal: string) => CourseOutline;
+  updateCourseOutline: (projectId: string, updates: Partial<CourseOutline>) => void;
+  addModule: (projectId: string, module: Omit<CourseModule, 'id' | 'order' | 'lessons'>) => CourseModule;
+  updateModule: (projectId: string, moduleId: string, updates: Partial<CourseModule>) => void;
+  removeModule: (projectId: string, moduleId: string) => void;
+  reorderModules: (projectId: string, moduleIds: string[]) => void;
+  addLesson: (projectId: string, moduleId: string, lesson: Omit<LessonPlan, 'id' | 'order'>) => LessonPlan;
+  updateLesson: (projectId: string, moduleId: string, lessonId: string, updates: Partial<LessonPlan>) => void;
+  removeLesson: (projectId: string, moduleId: string, lessonId: string) => void;
+  toggleModuleCollapse: (projectId: string, moduleId: string) => void;
+
+  // ── Design Document Generator ──
+  designDocuments: DesignDocument[];
+  activeDesignDocId: string | null;
+  getDesignDocs: (projectId: string) => DesignDocument[];
+  setActiveDesignDoc: (id: string | null) => void;
+  createDesignDoc: (doc: Omit<DesignDocument, 'id' | 'createdAt' | 'updatedAt' | 'version'>) => DesignDocument;
+  updateDesignDoc: (id: string, updates: Partial<DesignDocument>) => void;
+  addDesignDocSlide: (docId: string, slide: Omit<DesignDocSlide, 'id' | 'slideNumber'>) => DesignDocSlide;
+  updateDesignDocSlide: (docId: string, slideId: string, updates: Partial<DesignDocSlide>) => void;
+  removeDesignDocSlide: (docId: string, slideId: string) => void;
+  deleteDesignDoc: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -362,5 +414,387 @@ export const useAppStore = create<AppState>((set, get) => ({
         (m.extractedText && m.extractedText.toLowerCase().includes(q))
     );
     set({ searchResults: { projects, materials }, searchQuery: query });
+  },
+
+  // ══════════════════════════════════════════════
+  // NEEDS ANALYSIS WIZARD
+  // ══════════════════════════════════════════════
+  analysisWizards: {},
+
+  getAnalysisWizard: (projectId) => {
+    const wizard = get().analysisWizards[projectId];
+    if (wizard) return wizard;
+    return {
+      status: 'not-started' as AnalysisWizardStatus,
+      currentArea: 'performance-gap' as AnalysisArea,
+      completedAreas: [],
+      responses: [],
+    };
+  },
+
+  startAnalysisWizard: (projectId) => {
+    set((state) => ({
+      analysisWizards: {
+        ...state.analysisWizards,
+        [projectId]: {
+          status: 'in-progress',
+          currentArea: 'performance-gap' as AnalysisArea,
+          completedAreas: [],
+          responses: [],
+        },
+      },
+    }));
+  },
+
+  setAnalysisArea: (projectId, area) => {
+    set((state) => ({
+      analysisWizards: {
+        ...state.analysisWizards,
+        [projectId]: {
+          ...state.analysisWizards[projectId],
+          currentArea: area,
+        },
+      },
+    }));
+  },
+
+  addAnalysisResponse: (projectId, response) => {
+    const newResponse: AnalysisResponse = {
+      ...response,
+      timestamp: new Date().toISOString(),
+    };
+    set((state) => ({
+      analysisWizards: {
+        ...state.analysisWizards,
+        [projectId]: {
+          ...state.analysisWizards[projectId],
+          responses: [...(state.analysisWizards[projectId]?.responses || []), newResponse],
+        },
+      },
+    }));
+  },
+
+  completeAnalysisArea: (projectId, area) => {
+    set((state) => {
+      const wizard = state.analysisWizards[projectId];
+      if (!wizard) return state;
+      return {
+        analysisWizards: {
+          ...state.analysisWizards,
+          [projectId]: {
+            ...wizard,
+            completedAreas: [...wizard.completedAreas, area],
+          },
+        },
+      };
+    });
+  },
+
+  setAnalysisReport: (projectId, report) => {
+    set((state) => ({
+      analysisWizards: {
+        ...state.analysisWizards,
+        [projectId]: {
+          ...state.analysisWizards[projectId],
+          report,
+        },
+      },
+    }));
+  },
+
+  completeAnalysisWizard: (projectId) => {
+    set((state) => ({
+      analysisWizards: {
+        ...state.analysisWizards,
+        [projectId]: {
+          ...state.analysisWizards[projectId],
+          status: 'completed',
+        },
+      },
+    }));
+    // Update project phase progress
+    get().updateProject(projectId, {
+      phaseProgress: {
+        ...get().projects.find((p) => p.id === projectId)!.phaseProgress,
+        analysis: 100,
+      },
+    });
+  },
+
+  // ══════════════════════════════════════════════
+  // COURSE OUTLINE BUILDER
+  // ══════════════════════════════════════════════
+  courseOutlines: {},
+
+  getCourseOutline: (projectId) => {
+    return get().courseOutlines[projectId] || null;
+  },
+
+  createCourseOutline: (projectId, courseGoal) => {
+    const outline: CourseOutline = {
+      id: generateId(),
+      projectId,
+      courseGoal,
+      totalDuration: 0,
+      modules: [],
+      bloomDistribution: { remember: 0, understand: 0, apply: 0, analyze: 0, evaluate: 0, create: 0 },
+      varkCoverage: { visual: 0, auditory: 0, readWrite: 0, kinesthetic: 0 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: 1,
+    };
+    set((state) => ({
+      courseOutlines: { ...state.courseOutlines, [projectId]: outline },
+    }));
+    return outline;
+  },
+
+  updateCourseOutline: (projectId, updates) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, ...updates, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  addModule: (projectId, moduleData) => {
+    const newModule: CourseModule = {
+      ...moduleData,
+      id: generateId(),
+      lessons: [],
+      order: (get().courseOutlines[projectId]?.modules.length || 0) + 1,
+    };
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const updated = {
+        ...outline,
+        modules: [...outline.modules, newModule],
+        totalDuration: outline.totalDuration + newModule.duration,
+        updatedAt: new Date().toISOString(),
+      };
+      return { courseOutlines: { ...state.courseOutlines, [projectId]: updated } };
+    });
+    return newModule;
+  },
+
+  updateModule: (projectId, moduleId, updates) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules.map((m) => (m.id === moduleId ? { ...m, ...updates } : m));
+      const totalDuration = modules.reduce((sum, m) => sum + m.duration, 0);
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules, totalDuration, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  removeModule: (projectId, moduleId) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules
+        .filter((m) => m.id !== moduleId)
+        .map((m, i) => ({ ...m, order: i + 1 }));
+      const totalDuration = modules.reduce((sum, m) => sum + m.duration, 0);
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules, totalDuration, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  reorderModules: (projectId, moduleIds) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const reordered = moduleIds
+        .map((id, i) => {
+          const mod = outline.modules.find((m) => m.id === id);
+          return mod ? { ...mod, order: i + 1 } : null;
+        })
+        .filter(Boolean) as CourseModule[];
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules: reordered, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  addLesson: (projectId, moduleId, lessonData) => {
+    const outline = get().courseOutlines[projectId];
+    const mod = outline?.modules.find((m) => m.id === moduleId);
+    const newLesson: LessonPlan = {
+      ...lessonData,
+      id: generateId(),
+      order: (mod?.lessons.length || 0) + 1,
+    };
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules.map((m) =>
+        m.id === moduleId
+          ? { ...m, lessons: [...m.lessons, newLesson], duration: m.duration + newLesson.duration }
+          : m
+      );
+      const totalDuration = modules.reduce((sum, m) => sum + m.duration, 0);
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules, totalDuration, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+    return newLesson;
+  },
+
+  updateLesson: (projectId, moduleId, lessonId, updates) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules.map((m) => {
+        if (m.id !== moduleId) return m;
+        const lessons = m.lessons.map((l) => (l.id === lessonId ? { ...l, ...updates } : l));
+        const duration = lessons.reduce((sum, l) => sum + l.duration, 0);
+        return { ...m, lessons, duration };
+      });
+      const totalDuration = modules.reduce((sum, m) => sum + m.duration, 0);
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules, totalDuration, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  removeLesson: (projectId, moduleId, lessonId) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules.map((m) => {
+        if (m.id !== moduleId) return m;
+        const lessons = m.lessons.filter((l) => l.id !== lessonId).map((l, i) => ({ ...l, order: i + 1 }));
+        const duration = lessons.reduce((sum, l) => sum + l.duration, 0);
+        return { ...m, lessons, duration };
+      });
+      const totalDuration = modules.reduce((sum, m) => sum + m.duration, 0);
+      return {
+        courseOutlines: {
+          ...state.courseOutlines,
+          [projectId]: { ...outline, modules, totalDuration, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  toggleModuleCollapse: (projectId, moduleId) => {
+    set((state) => {
+      const outline = state.courseOutlines[projectId];
+      if (!outline) return state;
+      const modules = outline.modules.map((m) =>
+        m.id === moduleId ? { ...m, collapsed: !m.collapsed } : m
+      );
+      return { courseOutlines: { ...state.courseOutlines, [projectId]: { ...outline, modules } } };
+    });
+  },
+
+  // ══════════════════════════════════════════════
+  // DESIGN DOCUMENT GENERATOR
+  // ══════════════════════════════════════════════
+  designDocuments: [],
+  activeDesignDocId: null,
+
+  getDesignDocs: (projectId) => {
+    return get().designDocuments.filter((d) => d.projectId === projectId);
+  },
+
+  setActiveDesignDoc: (id) => set({ activeDesignDocId: id }),
+
+  createDesignDoc: (doc) => {
+    const newDoc: DesignDocument = {
+      ...doc,
+      id: generateId(),
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    set((state) => ({ designDocuments: [...state.designDocuments, newDoc] }));
+    return newDoc;
+  },
+
+  updateDesignDoc: (id, updates) => {
+    set((state) => ({
+      designDocuments: state.designDocuments.map((d) =>
+        d.id === id ? { ...d, ...updates, updatedAt: new Date().toISOString() } : d
+      ),
+    }));
+  },
+
+  addDesignDocSlide: (docId, slideData) => {
+    const doc = get().designDocuments.find((d) => d.id === docId);
+    const newSlide: DesignDocSlide = {
+      ...slideData,
+      id: generateId(),
+      slideNumber: (doc?.slides.length || 0) + 1,
+    };
+    set((state) => ({
+      designDocuments: state.designDocuments.map((d) =>
+        d.id === docId
+          ? { ...d, slides: [...d.slides, newSlide], updatedAt: new Date().toISOString() }
+          : d
+      ),
+    }));
+    return newSlide;
+  },
+
+  updateDesignDocSlide: (docId, slideId, updates) => {
+    set((state) => ({
+      designDocuments: state.designDocuments.map((d) =>
+        d.id === docId
+          ? {
+              ...d,
+              slides: d.slides.map((s) => (s.id === slideId ? { ...s, ...updates } : s)),
+              updatedAt: new Date().toISOString(),
+            }
+          : d
+      ),
+    }));
+  },
+
+  removeDesignDocSlide: (docId, slideId) => {
+    set((state) => ({
+      designDocuments: state.designDocuments.map((d) =>
+        d.id === docId
+          ? {
+              ...d,
+              slides: d.slides
+                .filter((s) => s.id !== slideId)
+                .map((s, i) => ({ ...s, slideNumber: i + 1 })),
+              updatedAt: new Date().toISOString(),
+            }
+          : d
+      ),
+    }));
+  },
+
+  deleteDesignDoc: (id) => {
+    set((state) => ({
+      designDocuments: state.designDocuments.filter((d) => d.id !== id),
+      activeDesignDocId: state.activeDesignDocId === id ? null : state.activeDesignDocId,
+    }));
   },
 }));

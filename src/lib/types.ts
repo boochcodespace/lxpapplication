@@ -230,3 +230,224 @@ export const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     phase: 'implementation',
   },
 ];
+
+// ══════════════════════════════════════════════════════
+// FEATURE 1: NEEDS ANALYSIS WIZARD
+// ══════════════════════════════════════════════════════
+
+export type AnalysisArea =
+  | 'performance-gap'
+  | 'root-cause'
+  | 'audience'
+  | 'context-constraints'
+  | 'success-metrics'
+  | 'business-impact'
+  | 'multimodal'
+  | 'accessibility';
+
+export const ANALYSIS_AREAS: { key: AnalysisArea; label: string; description: string; icon: string }[] = [
+  { key: 'performance-gap', label: 'Performance Gap', description: 'Current vs desired state', icon: 'gap' },
+  { key: 'root-cause', label: 'Root Cause', description: 'Is this really a training problem?', icon: 'search' },
+  { key: 'audience', label: 'Audience Analysis', description: 'Learner characteristics, prerequisites, ZPD', icon: 'users' },
+  { key: 'context-constraints', label: 'Context & Constraints', description: 'Environment, timeline, budget', icon: 'settings' },
+  { key: 'success-metrics', label: 'Success Metrics', description: 'Measuring effectiveness', icon: 'chart' },
+  { key: 'business-impact', label: 'Business Impact', description: 'Organizational problem being solved', icon: 'building' },
+  { key: 'multimodal', label: 'Multimodal Requirements', description: 'Delivery constraints, learner preferences', icon: 'layers' },
+  { key: 'accessibility', label: 'Accessibility', description: 'WCAG level, assistive technology', icon: 'accessibility' },
+];
+
+export interface AnalysisQuestion {
+  id: string;
+  area: AnalysisArea;
+  question: string;
+  followUpHint?: string;
+  required: boolean;
+}
+
+export interface AnalysisResponse {
+  questionId: string;
+  area: AnalysisArea;
+  question: string;
+  answer: string;
+  timestamp: string;
+}
+
+export interface AnalysisRedFlag {
+  id: string;
+  severity: 'warning' | 'critical';
+  area: AnalysisArea;
+  message: string;
+  recommendation: string;
+}
+
+export interface NeedsAnalysisReport {
+  id: string;
+  projectId: string;
+  executiveSummary: string;
+  performanceGap: { currentState: string; desiredState: string; evidence: string[] };
+  learnerProfile: {
+    demographics: string;
+    priorKnowledge: string;
+    motivation: string;
+    zpdAssessment: string;
+    prerequisites: string[];
+  };
+  rootCauseAnalysis: { isTrainingAppropriate: boolean; reasoning: string; alternativeSolutions: string[] };
+  constraints: { timeline: string; budget: string; technology: string; environment: string; stakeholders: string[] };
+  multimodalRecommendations: { primaryModality: string; secondaryModalities: string[]; rationale: string };
+  accessibilityRequirements: { wcagLevel: string; assistiveTech: string[]; considerations: string[] };
+  successMetrics: { metric: string; measurement: string; target: string }[];
+  businessImpact: { problem: string; costOfInaction: string; expectedROI: string };
+  recommendation: {
+    format: CourseType;
+    duration: string;
+    deliveryMethod: string;
+    rationale: string;
+  };
+  materialReferences: string[];
+  materialGaps: string[];
+  redFlags: AnalysisRedFlag[];
+  createdAt: string;
+}
+
+export type AnalysisWizardStatus = 'not-started' | 'in-progress' | 'completed';
+
+export interface AnalysisWizardState {
+  status: AnalysisWizardStatus;
+  currentArea: AnalysisArea;
+  completedAreas: AnalysisArea[];
+  responses: AnalysisResponse[];
+  report?: NeedsAnalysisReport;
+}
+
+// ══════════════════════════════════════════════════════
+// FEATURE 2: COURSE OUTLINE BUILDER
+// ══════════════════════════════════════════════════════
+
+export type VARKModality = 'visual' | 'auditory' | 'readWrite' | 'kinesthetic';
+
+export const VARK_MODALITIES: { key: VARKModality; label: string; short: string; color: string }[] = [
+  { key: 'visual', label: 'Visual', short: 'V', color: 'bg-blue-100 text-blue-800' },
+  { key: 'auditory', label: 'Auditory', short: 'A', color: 'bg-purple-100 text-purple-800' },
+  { key: 'readWrite', label: 'Read/Write', short: 'R', color: 'bg-green-100 text-green-800' },
+  { key: 'kinesthetic', label: 'Kinesthetic', short: 'K', color: 'bg-orange-100 text-orange-800' },
+];
+
+export type ZPDLevel = 'comfort' | 'learning' | 'stretch';
+
+export interface LearningObjective {
+  id: string;
+  text: string;
+  bloomLevel: BloomLevel;
+  assessmentAligned: boolean;
+  materialRefs: string[];
+}
+
+export interface LessonPlan {
+  id: string;
+  title: string;
+  description: string;
+  duration: number; // minutes
+  objectives: LearningObjective[];
+  modalities: VARKModality[];
+  zpdLevel: ZPDLevel;
+  activities: string[];
+  assessmentType?: string;
+  materialRefs: string[];
+  accessibilityNotes: string[];
+  order: number;
+}
+
+export interface CourseModule {
+  id: string;
+  title: string;
+  description: string;
+  duration: number; // minutes
+  lessons: LessonPlan[];
+  objectives: LearningObjective[];
+  assessmentStrategy: string;
+  modalities: VARKModality[];
+  materialRefs: string[];
+  order: number;
+  collapsed?: boolean;
+}
+
+export interface CourseOutline {
+  id: string;
+  projectId: string;
+  courseGoal: string;
+  totalDuration: number;
+  modules: CourseModule[];
+  bloomDistribution: Record<BloomLevel, number>;
+  varkCoverage: Record<VARKModality, number>;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+
+// ══════════════════════════════════════════════════════
+// FEATURE 3: DESIGN DOCUMENT GENERATOR
+// ══════════════════════════════════════════════════════
+
+export type DesignDocFormat = 'ilt-slides' | 'elearning' | 'video-script' | 'job-aid' | 'facilitator-guide';
+
+export const DESIGN_DOC_FORMATS: { key: DesignDocFormat; label: string }[] = [
+  { key: 'ilt-slides', label: 'ILT Slides' },
+  { key: 'elearning', label: 'E-Learning Module' },
+  { key: 'video-script', label: 'Video Script' },
+  { key: 'job-aid', label: 'Job Aid' },
+  { key: 'facilitator-guide', label: 'Facilitator Guide' },
+];
+
+export interface LearnerViewContent {
+  heading: string;
+  bodyText: string;
+  bulletPoints: string[];
+  interactionDescription: string;
+  visualDescription: string;
+  audioScript: string;
+  accessibilityFeatures: string[];
+}
+
+export interface DesignNotesContent {
+  instructionalRationale: string;
+  multimodalStrategy: string;
+  interactivitySpec: string;
+  developmentNotes: string;
+  smeReviewFlag: boolean;
+  smeReviewNotes: string;
+  accessibilityNotes: string;
+  branchingLogic: string;
+  assessmentScoring: string;
+  scaffoldingStrategy: string;
+  assetRequirements: string[];
+  materialRefs: string[];
+  zpdLevel: ZPDLevel;
+  bloomLevel: BloomLevel;
+}
+
+export interface DesignDocSlide {
+  id: string;
+  slideNumber: number;
+  title: string;
+  objectiveRef: string;
+  learnerView: LearnerViewContent;
+  designNotes: DesignNotesContent;
+}
+
+export interface DesignDocument {
+  id: string;
+  projectId: string;
+  moduleId: string;
+  lessonId?: string;
+  format: DesignDocFormat;
+  title: string;
+  slides: DesignDocSlide[];
+  bloomDistribution: Record<BloomLevel, number>;
+  varkCoverage: Record<VARKModality, number>;
+  interactivityScore: number; // 0-100
+  accessibilityCompliance: number; // 0-100
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
