@@ -16,7 +16,7 @@ This is an AI-powered web application that guides instructional designers throug
 
 ### 🎯 Three Core Workflows
 
-**1. Needs Analysis Wizard**
+**1. Needs Analysis**
 - Guided interview process for discovering real training needs
 - Performance gap analysis and root cause identification
 - Material-informed questions and recommendations
