@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import NeedsAnalysisWizard from '@/components/analysis/NeedsAnalysisWizard';
 import OutlineBuilder from '@/components/outline/OutlineBuilder';
 import DesignDocGenerator from '@/components/design-doc/DesignDocGenerator';
+import QADashboard from '@/components/qa/QADashboard';
 
 function DashboardView() {
   const projects = useAppStore((s) => s.projects);
@@ -221,6 +222,8 @@ export default function Home() {
         return <OutlineBuilder projectId={activeProjectId} />;
       case 'design-doc':
         return <DesignDocGenerator projectId={activeProjectId} />;
+      case 'quality-assurance':
+        return <QADashboard projectId={activeProjectId} />;
       case 'chat':
       default:
         return <ChatView />;

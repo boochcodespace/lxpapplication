@@ -25,6 +25,10 @@ import {
   DesignDocument,
   DesignDocFormat,
   DesignDocSlide,
+  QAReport,
+  QAFinding,
+  QAToolType,
+  StyleGuide,
 } from './types';
 import { generateId } from './utils';
 
@@ -169,7 +173,7 @@ const sampleCollection: MaterialCollection = {
 interface AppState {
   // Navigation
   sidebarOpen: boolean;
-  activeView: 'dashboard' | 'chat' | 'materials' | 'settings' | 'analysis' | 'outline' | 'design-doc';
+  activeView: 'dashboard' | 'chat' | 'materials' | 'settings' | 'analysis' | 'outline' | 'design-doc' | 'quality-assurance';
   setSidebarOpen: (open: boolean) => void;
   setActiveView: (view: AppState['activeView']) => void;
 
@@ -247,6 +251,19 @@ interface AppState {
   updateDesignDocSlide: (docId: string, slideId: string, updates: Partial<DesignDocSlide>) => void;
   removeDesignDocSlide: (docId: string, slideId: string) => void;
   deleteDesignDoc: (id: string) => void;
+
+  // ── Quality Assurance Tools ──
+  qaReports: Record<string, QAReport[]>; // keyed by projectId
+  styleGuides: Record<string, StyleGuide>; // keyed by projectId
+  activeQATool: QAToolType | null;
+  getQAReports: (projectId: string) => QAReport[];
+  getQAReport: (projectId: string, tool: QAToolType) => QAReport | null;
+  setActiveQATool: (tool: QAToolType | null) => void;
+  saveQAReport: (report: Omit<QAReport, 'id' | 'runAt'>) => QAReport;
+  resolveQAFinding: (projectId: string, tool: QAToolType, findingId: string) => void;
+  getStyleGuide: (projectId: string) => StyleGuide | null;
+  setStyleGuide: (projectId: string, guide: Omit<StyleGuide, 'id' | 'uploadedAt'>) => StyleGuide;
+  removeStyleGuide: (projectId: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -796,5 +813,84 @@ export const useAppStore = create<AppState>((set, get) => ({
       designDocuments: state.designDocuments.filter((d) => d.id !== id),
       activeDesignDocId: state.activeDesignDocId === id ? null : state.activeDesignDocId,
     }));
+  },
+
+  // ══════════════════════════════════════════════
+  // QUALITY ASSURANCE TOOLS
+  // ══════════════════════════════════════════════
+  qaReports: {},
+  styleGuides: {},
+  activeQATool: null,
+
+  getQAReports: (projectId) => {
+    return get().qaReports[projectId] || [];
+  },
+
+  getQAReport: (projectId, tool) => {
+    const reports = get().qaReports[projectId] || [];
+    return reports.find((r) => r.tool === tool) || null;
+  },
+
+  setActiveQATool: (tool) => set({ activeQATool: tool }),
+
+  saveQAReport: (reportData) => {
+    const report: QAReport = {
+      ...reportData,
+      id: generateId(),
+      runAt: new Date().toISOString(),
+    };
+    set((state) => {
+      const existing = state.qaReports[report.projectId] || [];
+      // Replace existing report for same tool, or add new
+      const filtered = existing.filter((r) => r.tool !== report.tool);
+      return {
+        qaReports: {
+          ...state.qaReports,
+          [report.projectId]: [...filtered, report],
+        },
+      };
+    });
+    return report;
+  },
+
+  resolveQAFinding: (projectId, tool, findingId) => {
+    set((state) => {
+      const reports = state.qaReports[projectId] || [];
+      const updatedReports = reports.map((r) => {
+        if (r.tool !== tool) return r;
+        return {
+          ...r,
+          findings: r.findings.map((f) =>
+            f.id === findingId ? { ...f, resolved: true } : f
+          ),
+        };
+      });
+      return {
+        qaReports: { ...state.qaReports, [projectId]: updatedReports },
+      };
+    });
+  },
+
+  getStyleGuide: (projectId) => {
+    return get().styleGuides[projectId] || null;
+  },
+
+  setStyleGuide: (projectId, guideData) => {
+    const guide: StyleGuide = {
+      ...guideData,
+      id: generateId(),
+      uploadedAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      styleGuides: { ...state.styleGuides, [projectId]: guide },
+    }));
+    return guide;
+  },
+
+  removeStyleGuide: (projectId) => {
+    set((state) => {
+      const { [projectId]: _, ...rest } = state.styleGuides;
+      return { styleGuides: rest };
+    });
   },
 }));
