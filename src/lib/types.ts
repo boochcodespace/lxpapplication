@@ -451,3 +451,95 @@ export interface DesignDocument {
   createdAt: string;
   updatedAt: string;
 }
+
+// ══════════════════════════════════════════════════════
+// FEATURE 4: QUALITY ASSURANCE TOOLS
+// ══════════════════════════════════════════════════════
+
+export type QAToolType =
+  | 'alignment'
+  | 'blooms'
+  | 'multimodal'
+  | 'zpd'
+  | 'interactivity'
+  | 'accessibility'
+  | 'style-guide'
+  | 'gap-analysis'
+  | 'source-material';
+
+export const QA_TOOLS: { key: QAToolType; label: string; description: string; icon: string }[] = [
+  { key: 'alignment', label: 'Alignment Checker', description: 'Verify assessments match learning objectives', icon: 'link' },
+  { key: 'blooms', label: "Bloom's Analyzer", description: 'Ensure appropriate cognitive levels throughout', icon: 'layers' },
+  { key: 'multimodal', label: 'Multimodal Coverage', description: 'Check VARK distribution across course', icon: 'grid' },
+  { key: 'zpd', label: 'ZPD Validator', description: 'Assess if content targets learner ZPD', icon: 'target' },
+  { key: 'interactivity', label: 'Interactivity Checker', description: 'Detect fake interactivity and score meaningfulness', icon: 'zap' },
+  { key: 'accessibility', label: 'Accessibility Validator', description: 'WCAG 2.0 Level AA compliance check', icon: 'eye' },
+  { key: 'style-guide', label: 'Style Guide Enforcer', description: 'Check content against writing standards', icon: 'type' },
+  { key: 'gap-analysis', label: 'Gap Analysis', description: 'Identify missing components and weak areas', icon: 'search' },
+  { key: 'source-material', label: 'Source Material Audit', description: 'Track material usage and coverage', icon: 'folder' },
+];
+
+export type QASeverity = 'critical' | 'warning' | 'info' | 'pass';
+
+export interface QAFinding {
+  id: string;
+  tool: QAToolType;
+  severity: QASeverity;
+  title: string;
+  description: string;
+  location: string;
+  suggestion: string;
+  resolved: boolean;
+}
+
+export interface QAReport {
+  id: string;
+  projectId: string;
+  tool: QAToolType;
+  score: number; // 0-100
+  findings: QAFinding[];
+  summary: string;
+  runAt: string;
+}
+
+export type StyleGuideType = 'pdf-upload' | 'microsoft' | 'custom';
+
+export interface StyleRule {
+  id: string;
+  category: 'voice' | 'terminology' | 'formatting' | 'structure' | 'tone';
+  rule: string;
+  example?: string;
+  severity: 'error' | 'warning' | 'info';
+}
+
+export interface StyleGuide {
+  id: string;
+  projectId: string;
+  name: string;
+  type: StyleGuideType;
+  rules: StyleRule[];
+  uploadedAt: string;
+  pdfFileName?: string;
+  pdfContent?: string;
+}
+
+export const MICROSOFT_STYLE_RULES: StyleRule[] = [
+  { id: 'ms-1', category: 'voice', rule: 'Use active voice instead of passive voice', example: '"The manager approves the request" not "The request is approved by the manager"', severity: 'warning' },
+  { id: 'ms-2', category: 'voice', rule: 'Use second person (you/your) to address the reader directly', example: '"You can configure settings" not "Users can configure settings"', severity: 'info' },
+  { id: 'ms-3', category: 'tone', rule: 'Write in a conversational but professional tone', example: 'Avoid overly formal or stiff language', severity: 'info' },
+  { id: 'ms-4', category: 'terminology', rule: 'Use consistent terminology throughout — pick one term for a concept and stick with it', severity: 'warning' },
+  { id: 'ms-5', category: 'terminology', rule: 'Define jargon and technical terms on first use', severity: 'warning' },
+  { id: 'ms-6', category: 'terminology', rule: 'Avoid Latin abbreviations (e.g., i.e., etc.) — use plain English equivalents', example: '"for example" instead of "e.g.", "that is" instead of "i.e."', severity: 'info' },
+  { id: 'ms-7', category: 'formatting', rule: 'Use sentence-style capitalization for headings', example: '"Set up your account" not "Set Up Your Account"', severity: 'info' },
+  { id: 'ms-8', category: 'formatting', rule: 'Use numbered lists for sequential steps, bulleted lists for non-sequential items', severity: 'info' },
+  { id: 'ms-9', category: 'structure', rule: 'Keep sentences short — aim for 25 words or fewer', severity: 'warning' },
+  { id: 'ms-10', category: 'structure', rule: 'Keep paragraphs to 3-5 sentences maximum', severity: 'info' },
+  { id: 'ms-11', category: 'structure', rule: 'Lead with the most important information first', severity: 'info' },
+  { id: 'ms-12', category: 'structure', rule: 'Use proper heading hierarchy (H1 > H2 > H3) — never skip levels', severity: 'error' },
+  { id: 'ms-13', category: 'tone', rule: 'Avoid gendered pronouns — use "they/them" or rewrite the sentence', severity: 'warning' },
+  { id: 'ms-14', category: 'tone', rule: 'Avoid culturally specific idioms that may not translate', severity: 'info' },
+  { id: 'ms-15', category: 'formatting', rule: 'Use bold for UI elements and user input, not quotes or italics', severity: 'info' },
+  { id: 'ms-16', category: 'voice', rule: 'Avoid double negatives', example: '"You can" instead of "You cannot not"', severity: 'warning' },
+  { id: 'ms-17', category: 'structure', rule: 'One idea per paragraph — do not bundle multiple concepts together', severity: 'info' },
+  { id: 'ms-18', category: 'terminology', rule: 'Use contractions for a friendly tone (do not → don\'t, cannot → can\'t)', severity: 'info' },
+];
