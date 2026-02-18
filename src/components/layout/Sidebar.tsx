@@ -3,6 +3,7 @@
 import React from 'react';
 import { useAppStore } from '@/lib/store';
 import { cn, getPhaseColor, truncate } from '@/lib/utils';
+import type { ADDIEPhase } from '@/lib/types';
 
 const navItems = [
   {
@@ -20,6 +21,15 @@ const navItems = [
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'knowledge-base' as const,
+    label: 'Knowledge Base',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
       </svg>
     ),
   },
@@ -69,6 +79,15 @@ const workflowItems = [
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'development' as const,
+    label: 'Dev Support',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.653-4.655m0 0l3.166-2.516c.1-.08.209-.152.323-.218M13.126 11.572a3.643 3.643 0 00-.318-.318m0 0a3.643 3.643 0 00-5.15.115l-.318.318m5.468-.433a3.643 3.643 0 01.318.318" />
       </svg>
     ),
   },
@@ -178,6 +197,21 @@ export default function Sidebar() {
                 <span className={cn('text-xs px-1.5 py-0.5 rounded-full', getPhaseColor(project.currentPhase))}>
                   {project.currentPhase.charAt(0).toUpperCase() + project.currentPhase.slice(1)}
                 </span>
+                <div className="flex gap-0.5 w-full mt-1">
+                  {(['analysis', 'design', 'development', 'implementation', 'evaluation'] as ADDIEPhase[]).map((phase) => (
+                    <div
+                      key={phase}
+                      className={cn(
+                        'h-1 flex-1 rounded-full',
+                        project.phaseProgress[phase] === 100
+                          ? 'bg-green-400'
+                          : project.phaseProgress[phase] > 0
+                          ? 'bg-brand-300'
+                          : 'bg-surface-200'
+                      )}
+                    />
+                  ))}
+                </div>
               </button>
             ))}
         </div>

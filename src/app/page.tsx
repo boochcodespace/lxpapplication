@@ -16,6 +16,8 @@ import NeedsAnalysisWizard from '@/components/analysis/NeedsAnalysisWizard';
 import OutlineBuilder from '@/components/outline/OutlineBuilder';
 import DesignDocGenerator from '@/components/design-doc/DesignDocGenerator';
 import QADashboard from '@/components/qa/QADashboard';
+import DevelopmentHub from '@/components/development/DevelopmentHub';
+import KnowledgeBase from '@/components/knowledge/KnowledgeBase';
 
 function DashboardView() {
   const projects = useAppStore((s) => s.projects);
@@ -224,6 +226,8 @@ export default function Home() {
         return <DesignDocGenerator projectId={activeProjectId} />;
       case 'quality-assurance':
         return <QADashboard projectId={activeProjectId} />;
+      case 'development':
+        return <DevelopmentHub projectId={activeProjectId} />;
       case 'chat':
       default:
         return <ChatView />;
@@ -232,9 +236,10 @@ export default function Home() {
 
   return (
     <AppShell>
-      {!activeProjectId && activeView === 'dashboard' && <DashboardView />}
-      {!activeProjectId && activeView === 'materials' && <MaterialsView />}
-      {activeProjectId && renderProjectView()}
+      {activeView === 'knowledge-base' && <KnowledgeBase />}
+      {activeView !== 'knowledge-base' && !activeProjectId && activeView === 'dashboard' && <DashboardView />}
+      {activeView !== 'knowledge-base' && !activeProjectId && activeView === 'materials' && <MaterialsView />}
+      {activeView !== 'knowledge-base' && activeProjectId && renderProjectView()}
     </AppShell>
   );
 }
