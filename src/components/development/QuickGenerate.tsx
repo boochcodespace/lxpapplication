@@ -400,7 +400,7 @@ function generateReflectionQuestions(inputs: Record<string, string>): string {
     { q: `If you were explaining ${topic} to a colleague who had no prior knowledge, how would you describe it in plain language?`, j: 'Try writing your explanation as if composing a brief email to a teammate.' },
     { q: `Where do you anticipate challenges when applying what you have learned about ${topic}? How might you overcome them?`, j: 'Be honest about potential barriers — resources, time, culture, confidence.' },
     { q: `What additional support, tools, or information would help you apply ${topic} more effectively?`, j: 'Identify 1–2 specific resources or types of support that would be helpful.' },
-    { q: `How does ${topic} connect to broader goals in your organization or profession?`, j: 'Think about the "big picture." How does this fit into your organization's mission or strategy?' },
+    { q: `How does ${topic} connect to broader goals in your organization or profession?`, j: `Think about the "big picture." How does this fit into your organization's mission or strategy?` },
   ];
 
   const selected = allQuestions.slice(0, Math.min(n, allQuestions.length));
