@@ -543,3 +543,205 @@ export const MICROSOFT_STYLE_RULES: StyleRule[] = [
   { id: 'ms-17', category: 'structure', rule: 'One idea per paragraph — do not bundle multiple concepts together', severity: 'info' },
   { id: 'ms-18', category: 'terminology', rule: 'Use contractions for a friendly tone (do not → don\'t, cannot → can\'t)', severity: 'info' },
 ];
+
+// ══════════════════════════════════════════════════════
+// FEATURE 5: DEVELOPMENT SUPPORT TOOLS
+// ══════════════════════════════════════════════════════
+
+// ── Assessment Generator ──
+
+export type AssessmentQuestionType =
+  | 'multiple-choice'
+  | 'true-false'
+  | 'matching'
+  | 'short-answer'
+  | 'essay'
+  | 'scenario-based'
+  | 'ordering';
+
+export const ASSESSMENT_QUESTION_TYPES: { key: AssessmentQuestionType; label: string; bloomLevels: BloomLevel[] }[] = [
+  { key: 'multiple-choice', label: 'Multiple Choice', bloomLevels: ['remember', 'understand'] },
+  { key: 'true-false', label: 'True / False', bloomLevels: ['remember', 'understand'] },
+  { key: 'matching', label: 'Matching', bloomLevels: ['remember', 'understand'] },
+  { key: 'short-answer', label: 'Short Answer', bloomLevels: ['remember', 'understand', 'apply'] },
+  { key: 'essay', label: 'Essay / Open Response', bloomLevels: ['evaluate', 'create'] },
+  { key: 'scenario-based', label: 'Scenario-Based', bloomLevels: ['apply', 'analyze', 'evaluate'] },
+  { key: 'ordering', label: 'Ordering / Sequencing', bloomLevels: ['understand', 'apply'] },
+];
+
+export type QuestionDifficulty = 'foundational' | 'intermediate' | 'advanced';
+
+export interface AnswerChoice {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+export interface MatchingPair {
+  id: string;
+  prompt: string;
+  match: string;
+}
+
+export interface AssessmentQuestion {
+  id: string;
+  type: AssessmentQuestionType;
+  topic: string;
+  bloomLevel: BloomLevel;
+  difficulty: QuestionDifficulty;
+  stem: string;
+  scenario?: string;
+  choices?: AnswerChoice[];
+  matchingPairs?: MatchingPair[];
+  orderItems?: string[];
+  correctAnswer?: string;
+  rubricPoints?: string[];
+  objectiveRef?: string;
+  explanation: string;
+  estimatedTime: number; // minutes
+  tags: string[];
+}
+
+export interface BlueprintModule {
+  moduleId: string;
+  moduleTitle: string;
+  questionCount: number;
+  bloomTargets: BloomLevel[];
+}
+
+export interface AssessmentBlueprint {
+  id: string;
+  projectId: string;
+  title: string;
+  totalQuestions: number;
+  modules: BlueprintModule[];
+  questionTypeDistribution: Partial<Record<AssessmentQuestionType, number>>;
+  bloomDistribution: Partial<Record<BloomLevel, number>>;
+  estimatedDuration: number;
+  questions: AssessmentQuestion[];
+  createdAt: string;
+}
+
+// ── Rubric Builder ──
+
+export interface RubricLevel {
+  id: string;
+  label: string;
+  points: number;
+  descriptor: string;
+}
+
+export interface RubricCriterion {
+  id: string;
+  name: string;
+  description: string;
+  weight: number; // percentage (all criteria weights sum to 100)
+  levels: RubricLevel[];
+}
+
+export interface GeneratedRubric {
+  id: string;
+  projectId: string;
+  title: string;
+  assessmentType: string;
+  bloomLevel: BloomLevel;
+  totalPoints: number;
+  criteria: RubricCriterion[];
+  objectiveRef?: string;
+  createdAt: string;
+}
+
+// ── Learner Persona Generator ──
+
+export type ExperienceLevel = 'novice' | 'intermediate' | 'expert';
+export type TechComfortLevel = 'low' | 'medium' | 'high';
+
+export interface LearnerPersona {
+  id: string;
+  projectId: string;
+  name: string;
+  role: string;
+  ageRange: string;
+  experienceLevel: ExperienceLevel;
+  background: string;
+  goals: string[];
+  challenges: string[];
+  learningPreferences: VARKModality[];
+  techComfort: TechComfortLevel;
+  motivation: string;
+  priorKnowledge: string;
+  workContext: string;
+  accessibilityNeeds: string;
+  quote: string;
+  zpdAssessment: string;
+  createdAt: string;
+}
+
+// ── Facilitator Guide Generator ──
+
+export interface FacilitatorGuideSection {
+  id: string;
+  title: string;
+  duration: number;
+  objectives: string[];
+  facilitatorNotes: string;
+  activities: string[];
+  discussionPrompts: string[];
+  materials: string[];
+  transitionNote: string;
+  timingTips: string;
+}
+
+export interface FacilitatorGuide {
+  id: string;
+  projectId: string;
+  courseTitle: string;
+  audience: string;
+  prerequisites: string;
+  roomSetup: string;
+  techRequirements: string;
+  totalDuration: number;
+  sections: FacilitatorGuideSection[];
+  createdAt: string;
+}
+
+// ── Quick Generate ──
+
+export type QuickGenerateType =
+  | 'objectives'
+  | 'questions'
+  | 'discussion-prompts'
+  | 'reflection-questions'
+  | 'case-study'
+  | 'job-aid'
+  | 'activity-instructions';
+
+export interface QuickGenerateResult {
+  id: string;
+  projectId: string;
+  type: QuickGenerateType;
+  topic: string;
+  bloomLevel?: BloomLevel;
+  content: string; // markdown-formatted output
+  createdAt: string;
+}
+
+// ── Active Dev Tool ──
+
+export type DevToolType =
+  | 'assessment-gen'
+  | 'blueprint'
+  | 'persona-gen'
+  | 'rubric-builder'
+  | 'facilitator-guide'
+  | 'quick-generate';
+
+export const DEV_TOOLS: { key: DevToolType; label: string; description: string; icon: string; phase: ADDIEPhase }[] = [
+  { key: 'assessment-gen', label: 'Assessment Generator', description: 'Generate all question types: MC, T/F, scenario-based, essay', icon: 'clipboard', phase: 'development' },
+  { key: 'blueprint', label: 'Assessment Blueprint', description: 'Build a complete assessment plan across modules', icon: 'map', phase: 'design' },
+  { key: 'persona-gen', label: 'Learner Personas', description: 'Create rich learner personas for your target audience', icon: 'users', phase: 'analysis' },
+  { key: 'rubric-builder', label: 'Rubric Builder', description: 'Create scoring rubrics for subjective assessments', icon: 'grid', phase: 'development' },
+  { key: 'facilitator-guide', label: 'Facilitator Guide', description: 'Draft instructor guides with timing and activities', icon: 'book', phase: 'implementation' },
+  { key: 'quick-generate', label: 'Quick Generate', description: 'Fast tools: objectives, discussion prompts, job aids', icon: 'zap', phase: 'development' },
+];

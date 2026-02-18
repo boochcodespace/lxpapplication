@@ -29,6 +29,13 @@ import {
   QAFinding,
   QAToolType,
   StyleGuide,
+  AssessmentQuestion,
+  AssessmentBlueprint,
+  GeneratedRubric,
+  LearnerPersona,
+  FacilitatorGuide,
+  QuickGenerateResult,
+  DevToolType,
 } from './types';
 import { generateId } from './utils';
 
@@ -173,7 +180,7 @@ const sampleCollection: MaterialCollection = {
 interface AppState {
   // Navigation
   sidebarOpen: boolean;
-  activeView: 'dashboard' | 'chat' | 'materials' | 'settings' | 'analysis' | 'outline' | 'design-doc' | 'quality-assurance';
+  activeView: 'dashboard' | 'chat' | 'materials' | 'settings' | 'analysis' | 'outline' | 'design-doc' | 'quality-assurance' | 'development' | 'knowledge-base';
   setSidebarOpen: (open: boolean) => void;
   setActiveView: (view: AppState['activeView']) => void;
 
@@ -264,6 +271,34 @@ interface AppState {
   getStyleGuide: (projectId: string) => StyleGuide | null;
   setStyleGuide: (projectId: string, guide: Omit<StyleGuide, 'id' | 'uploadedAt'>) => StyleGuide;
   removeStyleGuide: (projectId: string) => void;
+
+  // ── Development Support Tools ──
+  generatedQuestions: Record<string, AssessmentQuestion[]>; // keyed by projectId
+  assessmentBlueprints: Record<string, AssessmentBlueprint[]>; // keyed by projectId
+  generatedRubrics: Record<string, GeneratedRubric[]>; // keyed by projectId
+  learnerPersonas: Record<string, LearnerPersona[]>; // keyed by projectId
+  facilitatorGuides: Record<string, FacilitatorGuide[]>; // keyed by projectId
+  quickGenerateResults: Record<string, QuickGenerateResult[]>; // keyed by projectId
+  activeDevTool: DevToolType | null;
+  setActiveDevTool: (tool: DevToolType | null) => void;
+  addGeneratedQuestions: (projectId: string, questions: AssessmentQuestion[]) => void;
+  clearGeneratedQuestions: (projectId: string) => void;
+  addAssessmentBlueprint: (blueprint: Omit<AssessmentBlueprint, 'id' | 'createdAt'>) => AssessmentBlueprint;
+  addGeneratedRubric: (rubric: Omit<GeneratedRubric, 'id' | 'createdAt'>) => GeneratedRubric;
+  deleteGeneratedRubric: (projectId: string, rubricId: string) => void;
+  addLearnerPersona: (persona: Omit<LearnerPersona, 'id' | 'createdAt'>) => LearnerPersona;
+  deleteLearnerPersona: (projectId: string, personaId: string) => void;
+  addFacilitatorGuide: (guide: Omit<FacilitatorGuide, 'id' | 'createdAt'>) => FacilitatorGuide;
+  deleteFacilitatorGuide: (projectId: string, guideId: string) => void;
+  addQuickGenerateResult: (result: Omit<QuickGenerateResult, 'id' | 'createdAt'>) => QuickGenerateResult;
+  getDevToolData: (projectId: string) => {
+    questions: AssessmentQuestion[];
+    blueprints: AssessmentBlueprint[];
+    rubrics: GeneratedRubric[];
+    personas: LearnerPersona[];
+    guides: FacilitatorGuide[];
+    quickResults: QuickGenerateResult[];
+  };
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -892,5 +927,147 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { [projectId]: _, ...rest } = state.styleGuides;
       return { styleGuides: rest };
     });
+  },
+
+  // ══════════════════════════════════════════════
+  // DEVELOPMENT SUPPORT TOOLS
+  // ══════════════════════════════════════════════
+  generatedQuestions: {},
+  assessmentBlueprints: {},
+  generatedRubrics: {},
+  learnerPersonas: {},
+  facilitatorGuides: {},
+  quickGenerateResults: {},
+  activeDevTool: null,
+
+  setActiveDevTool: (tool) => set({ activeDevTool: tool }),
+
+  addGeneratedQuestions: (projectId, questions) => {
+    set((state) => ({
+      generatedQuestions: {
+        ...state.generatedQuestions,
+        [projectId]: [...(state.generatedQuestions[projectId] || []), ...questions],
+      },
+    }));
+  },
+
+  clearGeneratedQuestions: (projectId) => {
+    set((state) => ({
+      generatedQuestions: { ...state.generatedQuestions, [projectId]: [] },
+    }));
+  },
+
+  addAssessmentBlueprint: (blueprintData) => {
+    const blueprint: AssessmentBlueprint = {
+      ...blueprintData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      assessmentBlueprints: {
+        ...state.assessmentBlueprints,
+        [blueprint.projectId]: [...(state.assessmentBlueprints[blueprint.projectId] || []), blueprint],
+      },
+    }));
+    return blueprint;
+  },
+
+  addGeneratedRubric: (rubricData) => {
+    const rubric: GeneratedRubric = {
+      ...rubricData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      generatedRubrics: {
+        ...state.generatedRubrics,
+        [rubric.projectId]: [...(state.generatedRubrics[rubric.projectId] || []), rubric],
+      },
+    }));
+    return rubric;
+  },
+
+  deleteGeneratedRubric: (projectId, rubricId) => {
+    set((state) => ({
+      generatedRubrics: {
+        ...state.generatedRubrics,
+        [projectId]: (state.generatedRubrics[projectId] || []).filter((r) => r.id !== rubricId),
+      },
+    }));
+  },
+
+  addLearnerPersona: (personaData) => {
+    const persona: LearnerPersona = {
+      ...personaData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      learnerPersonas: {
+        ...state.learnerPersonas,
+        [persona.projectId]: [...(state.learnerPersonas[persona.projectId] || []), persona],
+      },
+    }));
+    return persona;
+  },
+
+  deleteLearnerPersona: (projectId, personaId) => {
+    set((state) => ({
+      learnerPersonas: {
+        ...state.learnerPersonas,
+        [projectId]: (state.learnerPersonas[projectId] || []).filter((p) => p.id !== personaId),
+      },
+    }));
+  },
+
+  addFacilitatorGuide: (guideData) => {
+    const guide: FacilitatorGuide = {
+      ...guideData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      facilitatorGuides: {
+        ...state.facilitatorGuides,
+        [guide.projectId]: [...(state.facilitatorGuides[guide.projectId] || []), guide],
+      },
+    }));
+    return guide;
+  },
+
+  deleteFacilitatorGuide: (projectId, guideId) => {
+    set((state) => ({
+      facilitatorGuides: {
+        ...state.facilitatorGuides,
+        [projectId]: (state.facilitatorGuides[projectId] || []).filter((g) => g.id !== guideId),
+      },
+    }));
+  },
+
+  addQuickGenerateResult: (resultData) => {
+    const result: QuickGenerateResult = {
+      ...resultData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      quickGenerateResults: {
+        ...state.quickGenerateResults,
+        [result.projectId]: [...(state.quickGenerateResults[result.projectId] || []), result],
+      },
+    }));
+    return result;
+  },
+
+  getDevToolData: (projectId) => {
+    const state = get();
+    return {
+      questions: state.generatedQuestions[projectId] || [],
+      blueprints: state.assessmentBlueprints[projectId] || [],
+      rubrics: state.generatedRubrics[projectId] || [],
+      personas: state.learnerPersonas[projectId] || [],
+      guides: state.facilitatorGuides[projectId] || [],
+      quickResults: state.quickGenerateResults[projectId] || [],
+    };
   },
 }));
