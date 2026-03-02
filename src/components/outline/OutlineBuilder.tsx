@@ -7,9 +7,56 @@ import Button from '@/components/ui/Button';
 import OutlineTree from '@/components/outline/OutlineTree';
 import ModuleEditor from '@/components/outline/ModuleEditor';
 import OutlineCharts from '@/components/outline/OutlineCharts';
+import type { NeedsAnalysisReport } from '@/lib/types';
 
 interface OutlineBuilderProps {
   projectId: string;
+}
+
+function AnalysisContextPanel({ report, onDismiss }: { report: NeedsAnalysisReport; onDismiss: () => void }) {
+  return (
+    <div className="mx-4 mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Analysis Context</span>
+          <span className="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-medium">
+            Informing this outline
+          </span>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">Target Audience</p>
+          <p className="text-blue-600 dark:text-blue-400">{report.learnerProfile.demographics || 'Not specified'}</p>
+        </div>
+        <div>
+          <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">Performance Gap</p>
+          <p className="text-blue-600 dark:text-blue-400">{report.performanceGap.currentState ? `${report.performanceGap.currentState.slice(0, 80)}...` : 'Not specified'}</p>
+        </div>
+        <div>
+          <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">Recommended Format</p>
+          <p className="text-blue-600 dark:text-blue-400 capitalize">{report.recommendation?.format?.replace(/-/g, ' ') || 'Not specified'}</p>
+        </div>
+        <div>
+          <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">Key Constraint</p>
+          <p className="text-blue-600 dark:text-blue-400">{report.constraints?.timeline || 'Not specified'}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
@@ -17,6 +64,7 @@ export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
   const createCourseOutline = useAppStore((s) => s.createCourseOutline);
   const addModule = useAppStore((s) => s.addModule);
   const projects = useAppStore((s) => s.projects);
+  const analysisWizards = useAppStore((s) => s.analysisWizards);
 
   const outline = getCourseOutline(projectId);
   const project = projects.find((p) => p.id === projectId);
@@ -24,6 +72,19 @@ export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
   const [courseGoalInput, setCourseGoalInput] = useState('');
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [showAnalysisContext, setShowAnalysisContext] = useState(true);
+
+  const analysisReport = analysisWizards[projectId]?.report;
+
+  React.useEffect(() => {
+    if (analysisReport && !courseGoalInput) {
+      setCourseGoalInput(
+        analysisReport.businessImpact?.problem
+          ? `Address: ${analysisReport.businessImpact.problem}`
+          : ''
+      );
+    }
+  }, [analysisReport]);
 
   const handleCreateOutline = () => {
     if (!courseGoalInput.trim()) return;
@@ -58,7 +119,11 @@ export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
   // ── No outline yet: show creation screen ──
   if (!outline) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-surface-50 p-8">
+      <div className="flex-1 flex flex-col bg-surface-50">
+        {analysisReport && showAnalysisContext && (
+          <AnalysisContextPanel report={analysisReport} onDismiss={() => setShowAnalysisContext(false)} />
+        )}
+        <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-lg">
           <div className="bg-white rounded-xl border border-surface-200 shadow-sm p-8">
             {/* Icon */}
@@ -104,6 +169,7 @@ export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
             </div>
           </div>
         </div>
+        </div>
       </div>
     );
   }
@@ -117,6 +183,9 @@ export default function OutlineBuilder({ projectId }: OutlineBuilderProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-surface-50 min-h-0">
+      {analysisReport && showAnalysisContext && (
+        <AnalysisContextPanel report={analysisReport} onDismiss={() => setShowAnalysisContext(false)} />
+      )}
       {/* Top Bar */}
       <div className="bg-white border-b border-surface-200 px-5 py-3 flex items-center gap-4 shrink-0">
         {/* Course goal */}

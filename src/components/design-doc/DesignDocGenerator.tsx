@@ -9,12 +9,68 @@ import {
   BloomLevel,
   VARKModality,
   ZPDLevel,
+  CourseOutline,
 } from '@/lib/types';
 import { cn, generateId, formatRelativeTime, truncate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import DualTrackView from './DualTrackView';
 import DesignDocStats from './DesignDocStats';
+
+function OutlineContextPanel({ outline, onDismiss }: { outline: CourseOutline; onDismiss: () => void }) {
+  const totalLessons = outline.modules.reduce((sum, m) => sum + m.lessons.length, 0);
+  const primaryBloom = Object.entries(outline.bloomDistribution)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'N/A';
+
+  return (
+    <div className="mx-4 mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-green-800 dark:text-green-200">Outline Context</span>
+          <span className="px-1.5 py-0.5 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded font-medium">
+            Informing this design doc
+          </span>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="text-green-400 hover:text-green-600 dark:hover:text-green-300 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-3 text-xs">
+        <div className="bg-white dark:bg-green-900/30 rounded-lg p-2.5 text-center">
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300">{outline.modules.length}</p>
+          <p className="text-green-600 dark:text-green-400 mt-0.5">Modules</p>
+        </div>
+        <div className="bg-white dark:bg-green-900/30 rounded-lg p-2.5 text-center">
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300">{totalLessons}</p>
+          <p className="text-green-600 dark:text-green-400 mt-0.5">Lessons</p>
+        </div>
+        <div className="bg-white dark:bg-green-900/30 rounded-lg p-2.5 text-center">
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300">{Math.round(outline.totalDuration / 60)}h</p>
+          <p className="text-green-600 dark:text-green-400 mt-0.5">Duration</p>
+        </div>
+        <div className="bg-white dark:bg-green-900/30 rounded-lg p-2.5 text-center">
+          <p className="text-sm font-bold text-green-700 dark:text-green-300 capitalize">{primaryBloom}</p>
+          <p className="text-green-600 dark:text-green-400 mt-0.5">Top Bloom's</p>
+        </div>
+      </div>
+      {outline.courseGoal && (
+        <p className="text-xs text-green-700 dark:text-green-400 mt-3 border-t border-green-200 dark:border-green-700 pt-2">
+          <span className="font-medium">Course Goal:</span> {outline.courseGoal}
+        </p>
+      )}
+    </div>
+  );
+}
 
 interface DesignDocGeneratorProps {
   projectId: string;
@@ -307,6 +363,7 @@ export default function DesignDocGenerator({ projectId }: DesignDocGeneratorProp
   const createDoc = useAppStore((s) => s.createDesignDoc);
   const deleteDoc = useAppStore((s) => s.deleteDesignDoc);
   const getCourseOutline = useAppStore((s) => s.getCourseOutline);
+  const courseOutlines = useAppStore((s) => s.courseOutlines);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedModuleId, setSelectedModuleId] = useState('');
@@ -315,8 +372,10 @@ export default function DesignDocGenerator({ projectId }: DesignDocGeneratorProp
   const [customTitle, setCustomTitle] = useState('');
   const [generating, setGenerating] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showOutlineContext, setShowOutlineContext] = useState(true);
 
   const outline = getCourseOutline(projectId);
+  const outlineForContext = courseOutlines[projectId];
   const modules = outline?.modules || [];
 
   const selectedModule = modules.find((m) => m.id === selectedModuleId);
@@ -409,6 +468,9 @@ export default function DesignDocGenerator({ projectId }: DesignDocGeneratorProp
 
   return (
     <div className="h-full flex flex-col">
+      {outlineForContext && showOutlineContext && (
+        <OutlineContextPanel outline={outlineForContext} onDismiss={() => setShowOutlineContext(false)} />
+      )}
       {/* ── Top Section: Doc List & Create ── */}
       <div className="flex-shrink-0 px-6 pt-6 pb-4">
         <div className="flex items-center justify-between mb-4">

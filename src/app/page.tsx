@@ -18,6 +18,8 @@ import DesignDocGenerator from '@/components/design-doc/DesignDocGenerator';
 import QADashboard from '@/components/qa/QADashboard';
 import DevelopmentHub from '@/components/development/DevelopmentHub';
 import KnowledgeBase from '@/components/knowledge/KnowledgeBase';
+import SettingsPanel from '@/components/settings/SettingsPanel';
+import WorkflowProgress from '@/components/workflow/WorkflowProgress';
 
 function DashboardView() {
   const projects = useAppStore((s) => s.projects);
@@ -217,29 +219,44 @@ export default function Home() {
 
   const renderProjectView = () => {
     if (!activeProjectId) return null;
-    switch (activeView) {
-      case 'analysis':
-        return <NeedsAnalysisWizard projectId={activeProjectId} />;
-      case 'outline':
-        return <OutlineBuilder projectId={activeProjectId} />;
-      case 'design-doc':
-        return <DesignDocGenerator projectId={activeProjectId} />;
-      case 'quality-assurance':
-        return <QADashboard projectId={activeProjectId} />;
-      case 'development':
-        return <DevelopmentHub projectId={activeProjectId} />;
-      case 'chat':
-      default:
-        return <ChatView />;
-    }
+
+    const viewContent = (() => {
+      switch (activeView) {
+        case 'analysis':
+          return <NeedsAnalysisWizard projectId={activeProjectId} />;
+        case 'outline':
+          return <OutlineBuilder projectId={activeProjectId} />;
+        case 'design-doc':
+          return <DesignDocGenerator projectId={activeProjectId} />;
+        case 'quality-assurance':
+          return <QADashboard projectId={activeProjectId} />;
+        case 'development':
+          return <DevelopmentHub projectId={activeProjectId} />;
+        case 'chat':
+        default:
+          return <ChatView />;
+      }
+    })();
+
+    return (
+      <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+        {activeView !== 'chat' && (
+          <WorkflowProgress projectId={activeProjectId} variant="horizontal" />
+        )}
+        <div className="flex-1 overflow-y-auto">
+          {viewContent}
+        </div>
+      </div>
+    );
   };
 
   return (
     <AppShell>
       {activeView === 'knowledge-base' && <KnowledgeBase />}
-      {activeView !== 'knowledge-base' && !activeProjectId && activeView === 'dashboard' && <DashboardView />}
-      {activeView !== 'knowledge-base' && !activeProjectId && activeView === 'materials' && <MaterialsView />}
-      {activeView !== 'knowledge-base' && activeProjectId && renderProjectView()}
+      {activeView === 'settings' && <SettingsPanel />}
+      {activeView !== 'knowledge-base' && activeView !== 'settings' && !activeProjectId && activeView === 'dashboard' && <DashboardView />}
+      {activeView !== 'knowledge-base' && activeView !== 'settings' && !activeProjectId && activeView === 'materials' && <MaterialsView />}
+      {activeView !== 'knowledge-base' && activeView !== 'settings' && activeProjectId && renderProjectView()}
     </AppShell>
   );
 }
