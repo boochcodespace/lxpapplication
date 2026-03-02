@@ -745,3 +745,40 @@ export const DEV_TOOLS: { key: DevToolType; label: string; description: string; 
   { key: 'facilitator-guide', label: 'Facilitator Guide', description: 'Draft instructor guides with timing and activities', icon: 'book', phase: 'implementation' },
   { key: 'quick-generate', label: 'Quick Generate', description: 'Fast tools: objectives, discussion prompts, job aids', icon: 'zap', phase: 'development' },
 ];
+
+// ══════════════════════════════════════════════════════
+// SETTINGS, TEMPLATES & PROMPT SHORTCUTS
+// ══════════════════════════════════════════════════════
+
+export interface UserSettings {
+  displayName: string;
+  defaultCourseType: CourseType;
+  defaultBloomTarget: BloomLevel;
+  autoSave: boolean;
+  showWordCount: boolean;
+  showBloomsDistribution: boolean;
+  claudeMdContent: string;
+}
+
+export interface PromptShortcut {
+  id: string;
+  label: string;
+  prompt: string;
+  category: 'analysis' | 'outline' | 'design' | 'assessment' | 'general';
+  icon: string;
+  isBuiltIn: boolean;
+  createdAt: string;
+}
+
+export interface ContentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: 'module' | 'lesson' | 'assessment' | 'activity' | 'objective';
+  courseType: CourseType;
+  template: string;
+  variables: string[];
+  tags: string[];
+  isBuiltIn: boolean;
+  createdAt: string;
+}

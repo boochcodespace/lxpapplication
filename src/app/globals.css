@@ -8,8 +8,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-surface-50 text-surface-900;
+  }
+
+  html.dark body {
+    @apply bg-surface-900 text-surface-50;
   }
 }
 

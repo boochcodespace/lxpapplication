@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   Project,
   ChatMessage,
@@ -36,8 +37,95 @@ import {
   FacilitatorGuide,
   QuickGenerateResult,
   DevToolType,
+  UserSettings,
+  PromptShortcut,
+  ContentTemplate,
 } from './types';
 import { generateId } from './utils';
+
+const DEFAULT_CLAUDE_MD = `# AI Course Development Agent — Knowledge Base
+
+This file is the persistent knowledge base for the AI-powered course development agent.
+
+## ADDIE Methodology
+Every course follows Analysis → Design → Development → Implementation → Evaluation.
+Never skip Analysis. Designing without understanding the audience produces ineffective content.
+
+## Bloom's Taxonomy (Revised)
+Remember → Understand → Apply → Analyze → Evaluate → Create
+Target Apply or above for professional training.
+
+## Adult Learning Principles (Andragogy)
+1. Self-directed — Adults want control over their learning path
+2. Experience-based — Build on prior knowledge
+3. Relevance-oriented — Connect every concept to real-world application
+4. Problem-centered — Use case studies and scenarios
+5. Internally motivated — Mastery, autonomy, purpose
+6. Respectful — Honor the learner's time and intelligence
+
+## Multimodal Learning (VARK)
+Visual, Auditory, Read/Write, Kinesthetic.
+Include 2-3 modalities per module. Lead with the modality that best fits the content type.
+
+## Zone of Proximal Development (ZPD)
+Target the Learning Zone — achievable with scaffolding.
+Use: worked examples, partial completion, hints, checklists, chunking.
+Follow "I do → We do → You do" (Gradual Release of Responsibility).
+
+## Meaningful Interactivity
+Every interaction must: have decisions with real consequences, provide explanatory feedback,
+include scenario branching, and reflect real-world ambiguity.
+Avoid fake interactivity: clicking Next, cosmetic drag-and-drop, hidden accordions.
+
+## Accessibility (WCAG 2.0 AA)
+POUR: Perceivable, Operable, Understandable, Robust.
+Alt text, captions, 4.5:1 contrast, keyboard accessible, semantic HTML.
+
+## Assessment Principles
+Formative throughout. Summative at milestones.
+MC best practices: clear stem, plausible distractors, 4 options.
+Answer keys must explain why each answer is correct or incorrect.
+`;
+
+const DEFAULT_PROMPT_SHORTCUTS: PromptShortcut[] = [
+  { id: 'ps-1', label: 'Generate Learning Objectives', prompt: 'Generate 5 SMART learning objectives using Bloom\'s Taxonomy for this topic. Target the Apply level or above. Use the formula: "By the end of this module, learners will be able to [verb] + [object] + [condition]."', category: 'outline', icon: '🎯', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'ps-2', label: 'Write Scenario-Based Question', prompt: 'Write a scenario-based question that tests application-level thinking. Include: a realistic workplace scenario, a decision point, 4 answer choices with one clearly correct, and explanations for why each choice is right or wrong.', category: 'assessment', icon: '📝', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'ps-3', label: 'Create Case Study', prompt: 'Create a realistic case study for this topic. Include: background context, key challenge or problem, relevant data/information, 3-4 discussion questions that progress from Understand to Evaluate on Bloom\'s scale.', category: 'design', icon: '📋', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'ps-4', label: 'WCAG Accessibility Review', prompt: 'Review this content against WCAG 2.0 Level AA standards. Check: alt text for images, caption availability, color contrast ratios, keyboard accessibility, reading level, heading structure, and link descriptiveness. Flag any issues.', category: 'general', icon: '♿', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'ps-5', label: 'Suggest VARK Activities', prompt: 'Suggest one learning activity for each VARK modality (Visual, Auditory, Read/Write, Kinesthetic) for this topic. Each activity should be meaningfully different, not just the same content in a different format.', category: 'design', icon: '🎨', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'ps-6', label: "Check Bloom's Alignment", prompt: 'Review the learning objectives and assessments for this module. Verify: each objective uses a measurable action verb, each assessment aligns to exactly one objective, the Bloom\'s level of the assessment matches the objective, and there are no unassessed objectives.', category: 'assessment', icon: '🔗', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z' },
+];
+
+const DEFAULT_CONTENT_TEMPLATES: ContentTemplate[] = [
+  {
+    id: 'ct-1', name: 'Module Introduction', description: 'Standard opening for a course module',
+    category: 'module', courseType: 'self-paced', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z',
+    variables: ['MODULE_TITLE', 'DURATION', 'OBJECTIVE_COUNT', 'PREREQUISITE'],
+    tags: ['introduction', 'module'],
+    template: `# {{MODULE_TITLE}}\n\n**Duration:** {{DURATION}} minutes\n**Prerequisites:** {{PREREQUISITE}}\n\n## Welcome\nIn this module, you will...\n\n## Learning Objectives\nBy the end of this module, you will be able to:\n1. [Objective 1]\n2. [Objective 2]\n3. [Objective 3]\n\n## Why This Matters\n[Connect to job performance]\n\n## How to Navigate\n[Navigation instructions]`,
+  },
+  {
+    id: 'ct-2', name: 'Learning Objective', description: 'SMART objective using Bloom\'s formula',
+    category: 'objective', courseType: 'self-paced', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z',
+    variables: ['BLOOM_VERB', 'OBJECT', 'CONDITION', 'CRITERIA'],
+    tags: ['objective', 'bloom'],
+    template: `By the end of this {{CONTEXT}}, learners will be able to:\n**{{BLOOM_VERB}} {{OBJECT}}** {{CONDITION}} {{CRITERIA}}.`,
+  },
+  {
+    id: 'ct-3', name: 'Scenario-Based Question', description: 'Application-level assessment item',
+    category: 'assessment', courseType: 'self-paced', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z',
+    variables: ['ROLE', 'SITUATION', 'CHALLENGE', 'CORRECT_ACTION', 'DISTRACTOR_1', 'DISTRACTOR_2', 'DISTRACTOR_3'],
+    tags: ['assessment', 'scenario', 'apply'],
+    template: `**Scenario:** {{ROLE}} faces {{SITUATION}}. {{CHALLENGE}}\n\nWhat should {{ROLE}} do?\n\nA. {{CORRECT_ACTION}} ✓\nB. {{DISTRACTOR_1}}\nC. {{DISTRACTOR_2}}\nD. {{DISTRACTOR_3}}\n\n**Explanation:** Option A is correct because...\n**Why B is wrong:** ...\n**Why C is wrong:** ...\n**Why D is wrong:** ...`,
+  },
+  {
+    id: 'ct-4', name: 'ILT Activity', description: 'Instructor-led group activity template',
+    category: 'activity', courseType: 'ilt', isBuiltIn: true, createdAt: '2026-01-01T00:00:00Z',
+    variables: ['ACTIVITY_NAME', 'DURATION', 'GROUP_SIZE', 'OBJECTIVE', 'MATERIALS'],
+    tags: ['ilt', 'activity', 'group'],
+    template: `## {{ACTIVITY_NAME}}\n\n**Duration:** {{DURATION}} minutes\n**Group Size:** {{GROUP_SIZE}}\n**Materials:** {{MATERIALS}}\n\n### Facilitator Instructions\n1. Introduce the activity (2 min)\n2. [Step 2]\n3. [Step 3]\n\n### Debrief Questions\n- What did you notice?\n- How does this connect to {{OBJECTIVE}}?\n- What would you do differently?`,
+  },
+];
 
 // ── Sample Data ──
 
@@ -281,6 +369,25 @@ interface AppState {
   quickGenerateResults: Record<string, QuickGenerateResult[]>; // keyed by projectId
   activeDevTool: DevToolType | null;
   setActiveDevTool: (tool: DevToolType | null) => void;
+
+  // ── Theme ──
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+
+  // ── User Settings ──
+  userSettings: UserSettings;
+  updateUserSettings: (settings: Partial<UserSettings>) => void;
+
+  // ── Prompt Shortcuts ──
+  promptShortcuts: PromptShortcut[];
+  addPromptShortcut: (shortcut: Omit<PromptShortcut, 'id' | 'createdAt' | 'isBuiltIn'>) => void;
+  deletePromptShortcut: (id: string) => void;
+
+  // ── Content Templates ──
+  contentTemplates: ContentTemplate[];
+  addContentTemplate: (template: Omit<ContentTemplate, 'id' | 'createdAt' | 'isBuiltIn'>) => void;
+  updateContentTemplate: (id: string, updates: Partial<ContentTemplate>) => void;
+  deleteContentTemplate: (id: string) => void;
   addGeneratedQuestions: (projectId: string, questions: AssessmentQuestion[]) => void;
   clearGeneratedQuestions: (projectId: string) => void;
   addAssessmentBlueprint: (blueprint: Omit<AssessmentBlueprint, 'id' | 'createdAt'>) => AssessmentBlueprint;
@@ -301,7 +408,9 @@ interface AppState {
   };
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   // ── Navigation ──
   sidebarOpen: true,
   activeView: 'dashboard',
@@ -940,6 +1049,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   quickGenerateResults: {},
   activeDevTool: null,
 
+  // ── Theme & Settings ──
+  theme: 'light' as 'light' | 'dark',
+  userSettings: {
+    displayName: '',
+    defaultCourseType: 'self-paced' as CourseType,
+    defaultBloomTarget: 'apply' as BloomLevel,
+    autoSave: true,
+    showWordCount: true,
+    showBloomsDistribution: true,
+    claudeMdContent: DEFAULT_CLAUDE_MD,
+  },
+  promptShortcuts: DEFAULT_PROMPT_SHORTCUTS,
+  contentTemplates: DEFAULT_CONTENT_TEMPLATES,
+
   setActiveDevTool: (tool) => set({ activeDevTool: tool }),
 
   addGeneratedQuestions: (projectId, questions) => {
@@ -1070,4 +1193,80 @@ export const useAppStore = create<AppState>((set, get) => ({
       quickResults: state.quickGenerateResults[projectId] || [],
     };
   },
-}));
+
+  // ── Theme ──
+  toggleTheme: () => {
+    set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' }));
+  },
+
+  // ── User Settings ──
+  updateUserSettings: (settings) => {
+    set((state) => ({ userSettings: { ...state.userSettings, ...settings } }));
+  },
+
+  // ── Prompt Shortcuts ──
+  addPromptShortcut: (shortcut) => {
+    const newShortcut: PromptShortcut = {
+      ...shortcut,
+      id: generateId(),
+      isBuiltIn: false,
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({ promptShortcuts: [...state.promptShortcuts, newShortcut] }));
+  },
+  deletePromptShortcut: (id) => {
+    set((state) => ({
+      promptShortcuts: state.promptShortcuts.filter((s) => s.id !== id || s.isBuiltIn),
+    }));
+  },
+
+  // ── Content Templates ──
+  addContentTemplate: (template) => {
+    const newTemplate: ContentTemplate = {
+      ...template,
+      id: generateId(),
+      isBuiltIn: false,
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({ contentTemplates: [...state.contentTemplates, newTemplate] }));
+  },
+  updateContentTemplate: (id, updates) => {
+    set((state) => ({
+      contentTemplates: state.contentTemplates.map((t) =>
+        t.id === id && !t.isBuiltIn ? { ...t, ...updates } : t
+      ),
+    }));
+  },
+  deleteContentTemplate: (id) => {
+    set((state) => ({
+      contentTemplates: state.contentTemplates.filter((t) => t.id !== id || t.isBuiltIn),
+    }));
+  },
+    }),
+    {
+      name: 'lxp-app-store',
+      partialize: (state) => ({
+        projects: state.projects,
+        messages: state.messages,
+        materials: state.materials,
+        collections: state.collections,
+        tags: state.tags,
+        courseOutlines: state.courseOutlines,
+        analysisWizards: state.analysisWizards,
+        designDocuments: state.designDocuments,
+        qaReports: state.qaReports,
+        styleGuides: state.styleGuides,
+        generatedQuestions: state.generatedQuestions,
+        assessmentBlueprints: state.assessmentBlueprints,
+        generatedRubrics: state.generatedRubrics,
+        learnerPersonas: state.learnerPersonas,
+        facilitatorGuides: state.facilitatorGuides,
+        quickGenerateResults: state.quickGenerateResults,
+        theme: state.theme,
+        userSettings: state.userSettings,
+        promptShortcuts: state.promptShortcuts,
+        contentTemplates: state.contentTemplates,
+      }),
+    }
+  )
+);

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -12,9 +12,18 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
+  const theme = useAppStore((s) => s.theme);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900">
       <Sidebar />
       <Header />
       <main
